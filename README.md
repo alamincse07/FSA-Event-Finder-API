@@ -255,8 +255,8 @@ GET
 - Get Events created by the Authenticated user
 
 ## ER Diagram
+<img alt="ER Diagram" src="./assets/relation.png">
 
-![image info](/assets/relation.png)
 
 ## Static resources
 
