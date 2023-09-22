@@ -257,7 +257,7 @@ GET
 
 ## ER Diagram
 
-![image info](./assets/relation.png)
+![image info](/assets/relation.png)
 
 ## Static resources
 
