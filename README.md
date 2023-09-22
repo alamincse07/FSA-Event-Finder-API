@@ -19,9 +19,8 @@ If you would still prefer to do the installation manually, follow these steps:
 Clone the repo:
 
 ```bash
-git clone --depth 1 https://github.com/hagopj13/node-express-boilerplate.git
-cd node-express-boilerplate
-npx rimraf ./.git
+git clone --depth 1 https://github.com/alamincse07/FSA-Event-Finder-API.git
+cd FSA-Event-Finder-API
 ```
 
 Install the dependencies:
