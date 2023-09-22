@@ -1,0 +1,1121 @@
+openapi: 3.0.0
+info:
+  title: Local Events Finder API
+  version: 1.0.0
+  license:
+    name: MIT
+    url: '#'
+servers:
+  - url: http://localhost:3000/v1
+  - url: http://localhost:3000/v2
+tags:
+  - name: Address
+    description: Address for district, upazilla & union
+  - name: Auth
+    description: Authentication setup & retrieval
+  - name: Events
+    description: Event management & retrieval
+  - name: Users
+    description: User management and retrieval
+  - name: User Action
+    description: Authenticated User actions like event participate, decline & get own events
+
+paths:
+  /address/district:
+    get:
+      summary: Get all district list
+      description: Get all districts and use one from it to set the event district
+      tags:
+        - Address
+      responses:
+        '200':
+          $ref: '#/components/responses/AddressReturned'
+
+  /address/upazilla:
+    get:
+      summary: Get all upazilla list for a given district
+      description: Get list of upazilla for a district and use one from it to set the event upazilla
+      tags:
+        - Address
+      parameters:
+        - in: query
+          name: districtId
+          required: true
+          schema:
+            type: string
+          description: DistrictID  to fetch the upazillas
+      responses:
+        '200':
+          $ref: '#/components/responses/AddressReturned'
+
+  /address/union:
+    get:
+      summary: Get all unions list for a given upazilla
+      description: Get list of unions for a upazilla and use one from it to set the event union
+      tags:
+        - Address
+      parameters:
+        - in: query
+          name: upazillaId
+          required: true
+          schema:
+            type: string
+          description: Upazilla ID  to fetch the unions
+      responses:
+        '200':
+          $ref: '#/components/responses/AddressReturned'
+
+  /auth/register:
+    post:
+      summary: Register a user
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - phone
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                  description: Must be unique & used for the verification
+                phone:
+                  type: string
+                  minLength: 11
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: At least one number and one letter
+              example:
+                name: fake name
+                email: fake@example.com
+                phone: '12346798260'
+                password: password1
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  code:
+                    type: number
+
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /auth/send-verification-email:
+    post:
+      summary: Send verification email
+      description: An email verification will be re-sent to the registered email.
+      parameters:
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string
+            format: email
+            description: The email to verify
+      tags:
+        - Auth
+      responses:
+        '200':
+          $ref: '#/components/responses/200'
+        '400':
+          $ref: '#/components/responses/400'
+
+  /auth/verify-email:
+    post:
+      summary: Verify email to complete the registration
+      tags:
+        - Auth
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+          description: The verify email token
+      responses:
+        '200':
+          $ref: '#/components/responses/200'
+        '401':
+          $ref: '#/components/responses/401'
+        '400':
+          $ref: '#/components/responses/400'
+  /auth/login:
+    post:
+      summary: Login as a user
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+              example:
+                email: fake@example.com
+                password: password1
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  tokens:
+                    $ref: '#/components/schemas/AuthTokens'
+        '401':
+          $ref: '#/components/responses/400'
+
+  /auth/logout:
+    post:
+      summary: Logout
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+              example:
+                refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ZWJhYzUzNDk1NGI1NDEzOTgwNmMxMTIiLCJpYXQiOjE1ODkyOTg0ODQsImV4cCI6MTU4OTMwMDI4NH0.m1U63blB0MLej_WfB7yC2FTMnCziif9X8yzwDEfJXAg
+      responses:
+        '204':
+          description: No content
+        '404':
+          $ref: '#/components/responses/404'
+
+  /auth/refresh-tokens:
+    post:
+      summary: Refresh auth tokens
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+              example:
+                refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ZWJhYzUzNDk1NGI1NDEzOTgwNmMxMTIiLCJpYXQiOjE1ODkyOTg0ODQsImV4cCI6MTU4OTMwMDI4NH0.m1U63blB0MLej_WfB7yC2FTMnCziif9X8yzwDEfJXAg
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          $ref: '#/components/responses/401'
+  /auth/forgot-password:
+    post:
+      summary: Forgot password
+      description: An email will be sent to reset password.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+              example:
+                email: fake@example.com
+      responses:
+        '200':
+          $ref: '#/components/responses/200'
+        '404':
+          $ref: '#/components/responses/404'
+
+  /users:
+    get:
+      summary: Get all users
+      description: Only admins can retrieve all users.
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: User name
+        - in: query
+          name: verified
+          schema:
+            type: boolean
+          description: User verified or not
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+          description: sort by query in the form of field:desc/asc (ex. name:asc)
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+          description: Maximum number of users
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  page:
+                    type: integer
+                    example: 1
+                  limit:
+                    type: integer
+                    example: 10
+                  totalPages:
+                    type: integer
+                    example: 1
+                  totalResults:
+                    type: integer
+                    example: 1
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '400':
+          $ref: '#/components/responses/400'
+  /users/{id}:
+    get:
+      summary: Get a user
+      description: Logged in users can fetch only their own user information. Only admins can fetch other users.
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User id
+
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '400':
+          $ref: '#/components/responses/400'
+        '404':
+          $ref: '#/components/responses/404'
+    patch:
+      summary: Update a user
+      description: Logged in users can only update their own information except password. Only admins can update other users.
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                  description: must be unique
+                phone:
+                  type: string
+
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+    delete:
+      summary: Delete a user
+      description: Only admins can delete user.
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User id
+      responses:
+        '200':
+          $ref: '#/components/responses/200'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '400':
+          $ref: '#/components/responses/400'
+  /users/{id}/change-role:
+    post:
+      summary: Change the role of a user
+      description: Only admins can change the role.
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: User id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: ['admin', 'user']
+      responses:
+        '200':
+          $ref: '#/components/responses/200'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+
+  /events:
+    post:
+      summary: Create an event
+      description: Create upcoming event in the local area
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventSchemaDTO'
+
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+
+    get:
+      summary: Get all events
+      description: Get all events in the local area & apply filter, sort & pagination
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: eventType
+          schema:
+            type: string
+            enum: ['Sports', 'Donation', 'Tour', 'Picnic', 'Party', 'Concert', 'Others']
+          description: Event Type
+        - in: query
+          name: district
+          description: Filter by district
+          schema:
+            type: string
+        - in: query
+          name: upazilla
+          description: Filter by upazilla
+          schema:
+            type: string
+        - in: query
+          name: union
+          description: Filter by union
+          schema:
+            type: string
+
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: ['cancelled', 'completed', 'created']
+          description: Event status
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+          description: sort by query in the form of field:desc/asc (ex. eventType:asc, status:desc)
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+          description: Maximum number of events
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+
+      responses:
+        '200':
+          $ref: '#/components/responses/AllEvents'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+
+  /events/{eventId}:
+    get:
+      summary: Get a single event
+      description: Get a single event
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+
+      parameters:
+        - $ref: '#/components/parameters/eventIdPathParam'
+        - in: query
+          name: showParticipants
+          schema:
+            type: boolean
+            default: false
+          description: If the List of participants for this Event need to be returned
+      responses:
+        '200':
+          $ref: '#/components/responses/SingleEvent'
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '403':
+          $ref: '#/components/responses/403'
+    put:
+      summary: Update single event
+      description: Update a single event information
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/eventIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventSchemaUpdateDTO'
+
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+
+    delete:
+      summary: Delete a single event
+      description: Delete a single event, only admin can do it
+      tags:
+        - Events
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/eventIdPathParam'
+
+      responses:
+        '200':
+          $ref: '#/components/responses/200'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /me/participate/{eventId}:
+    post:
+      summary: Participate in a event
+      description: Logged in user can participate at any Event
+      tags:
+        - User Action
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/eventIdPathParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/200'
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+
+  /me/decline/{eventId}:
+    post:
+      summary: Decline participated event
+      description: Authenticated user can decline already participated event
+      tags:
+        - User Action
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/eventIdPathParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/200'
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '403':
+          $ref: '#/components/responses/403'
+
+  /me/created-events:
+    get:
+      summary: Get Events created by the Authenticated user
+      description: Get the list of events created by the Authenticated user
+      tags:
+        - User Action
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+          description: sort by query in the form of field:desc/asc (ex. eventType:asc, status:desc)
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+          description: Maximum number of events
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+
+      responses:
+        '200':
+          $ref: '#/components/responses/AllEvents'
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '403':
+          $ref: '#/components/responses/403'
+        '500':
+          $ref: '#/components/responses/500'
+
+components:
+  schemas:
+    EventArea:
+      type: object
+      required:
+        - district
+      properties:
+        upazilla:
+          type: string
+          description: The upzilla
+        district:
+          type: string
+          description: The district
+        union:
+          type: string
+          description: The union
+          x-openapi-required:
+            - upazilla
+
+      example:
+        district: Dhaka
+        upazilla: Nobinagor
+        union: Savar
+
+    EventSchemaDTO:
+      type: object
+      required:
+        - name
+        - description
+        - eventDate
+        - eventType
+        - eventArea
+      properties:
+        name:
+          type: string
+          example: Friendly Football Match
+        description:
+          type: string
+          description: Detailed description of the event
+          example: Are you ready for some football action like never before?
+            We're thrilled to invite you to a thrilling football match
+        eventDate:
+          type: string
+          format: date-time
+          description: Event date time in ISO Format
+          example: '2023-09-23T14:06:23.866Z'
+        eventType:
+          type: string
+          enum:
+            - Sports
+            - Social Work
+            - Donation
+            - Tour
+            - Picnic
+            - Party
+            - Concert
+            - Social Work
+            - Others
+          example: Sports
+        eventArea:
+          $ref: '#/components/schemas/EventArea'
+
+    EventSchemaUpdateDTO:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/EventSchemaDTO'
+        - type: object
+      properties:
+        status:
+          type: string
+          enum: ['cancelled', 'completed', 'created']
+
+    Event:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/EventSchemaUpdateDTO'
+        - type: object
+          properties:
+            id:
+              type: string
+            owner:
+              type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int32
+          example: 2
+        limit:
+          type: integer
+          format: int32
+          example: 10
+        nextPage:
+          oneOf:
+            - type: string
+            - type: boolean
+          example: 11
+        prevPage:
+          oneOf:
+            - type: string
+            - type: boolean
+          example: false
+        totalPages:
+          type: integer
+          format: int32
+          example: 5
+        totalResults:
+          type: integer
+          format: int32
+          example: 50
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 5ebac534954b54139806c112
+        email:
+          type: string
+          format: email
+          example: fake@example.com
+        name:
+          type: string
+          example: fake name
+        phone:
+          type: string
+          example: 4654565496978
+        verified:
+          type: boolean
+          example: true
+        role:
+          type: string
+          enum:
+            - user
+            - admin
+          example: user
+
+    Token:
+      type: object
+      properties:
+        token:
+          type: string
+        expires:
+          type: string
+          format: date-time
+      example:
+        token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ZWJhYzUzNDk1NGI1NDEzOTgwNmMxMTIiLCJpYXQiOjE1ODkyOTg0ODQsImV4cCI6MTU4OTMwMDI4NH0.m1U63blB0MLej_WfB7yC2FTMnCziif9X8yzwDEfJXAg
+        expires: '2020-05-12T16:18:04.793Z'
+    AuthTokens:
+      type: object
+      properties:
+        access:
+          $ref: '#/components/schemas/Token'
+        refresh:
+          $ref: '#/components/schemas/Token'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    pageParam:
+      in: query
+      name: page
+      description: current page number
+      required: true
+      schema:
+        type: integer
+        format: int32
+        example: 2
+    limitParam:
+      in: query
+      name: limit
+      description: maximum items to be returned
+      required: true
+      schema:
+        type: integer
+        format: int32
+        example: 10
+    sortTypeParam:
+      in: query
+      name: sort_type
+      description: type of sort (asc or dsc)
+      schema:
+        type: string
+        enum: [asc, dsc]
+        example: dsc
+    sortByParam:
+      in: query
+      name: sort_by
+      description: Sort key
+      schema:
+        type: string
+        example: updatedAt
+    searchParam:
+      in: query
+      name: search
+      description: Search term
+      schema:
+        type: string
+        example: title
+    eventIdPathParam:
+      in: path
+      name: eventId
+      required: true
+      description: Event ID
+      schema:
+        type: string
+        example: '64d268cdeef8c84bb18912db'
+  responses:
+    '200':
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: number
+                example: 200
+              message:
+                type: string
+                example: Success
+    '201':
+      description: Created
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: number
+                example: 201
+              message:
+                type: string
+                example: Created Successfully
+    '400':
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: number
+                example: 400
+              message:
+                type: string
+                example: Bad Request
+    '404':
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: number
+                example: 404
+              message:
+                type: string
+                example: Not Found
+
+    '401':
+      description: Un Authorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: number
+                example: 401
+              message:
+                type: string
+                example: Un Authorized
+    '409':
+      description: Conflicted
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: number
+                example: 409
+              message:
+                type: string
+                example: Already exists
+    '403':
+      description: Access Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: number
+                example: 403
+              message:
+                type: string
+                example: Access Forbidden
+    '500':
+      description: Server Error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: number
+                example: 500
+              message:
+                type: string
+                example: Something went wrong
+    AddressReturned:
+      description: The Address information
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                pagination:
+                  $ref: '#/components/schemas/Pagination'
+    EventSetup:
+      description: The Event Response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/EventSchemaUpdateDTO'
+              - type: object
+                properties:
+                  id:
+                    type: string
+                  owner:
+                    type: string
+
+    SingleEvent:
+      description: The Event information
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Event'
+              - type: object
+                properties:
+                  participants:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        phone:
+                          type: string
+
+    AllEvents:
+      description: Event Results
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              results:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+              pagination:
+                $ref: '#/components/schemas/Pagination'
